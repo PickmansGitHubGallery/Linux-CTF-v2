@@ -8,6 +8,8 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 BASE="/srv/ctf2"
+echo "I skal bruge Base64 til at dekryptere..." > "$BASE/read-me.txt"
+
 
 # Opret mappestruktur
 mkdir -p "$BASE"/logs
