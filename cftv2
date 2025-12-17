@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+
+# Simpelt CTF-setup (version 2, lidt sværere)
+
+if [ "$EUID" -ne 0 ]; then
+  echo "Kør dette script som root (brug sudo)."
+  exit 1
+fi
+
+BASE="/srv/ctf2"
+
+# Opret mappestruktur
+mkdir -p "$BASE"/logs
+mkdir -p "$BASE"/data/notes
+mkdir -p "$BASE"/data/reports
+mkdir -p "$BASE"/tmp
+mkdir -p "$BASE"/.old
+mkdir -p "$BASE"/.hidden/junk
+mkdir -p "$BASE"/.hidden/decoy_flags
+mkdir -p "$BASE"/.very_hidden/.even_more/flag
+
+########################
+# Lidt støj / lokkemad #
+########################
+
+# Almindelige filer
+echo "System log data..."           > "$BASE/logs/system.log"
+echo "Auth log data..."             > "$BASE/logs/auth.log"
+echo "Random log data..."           > "$BASE/logs/random1.log"
+echo "Endnu mere tilfældig log..."  > "$BASE/logs/random2.log"
+
+echo "Liste over brugere (ikke vigtig til flag)" > "$BASE/data/users.csv"
+echo "Oversigt over gamle rapporter"             > "$BASE/data/reports/index.txt"
+
+echo "Note 1: Denne fil er (måske) ikke den, du leder efter." > "$BASE/data/notes/note1.txt"
+echo "Note 2: Prøv at kigge ekstra godt i logfilerne."         > "$BASE/data/notes/note2.txt"
+echo "Note 3: Nogle gange er ting kodet..."                    > "$BASE/data/notes/note3.txt"
+
+# Falske flag-filer
+echo "FAKEFLAG{det_her_er_ikke_det_rigtige_flag}" > "$BASE/.hidden/decoy_flags/fake_flag1.txt"
+echo "FAKEFLAG{stadig_ikke_rigtigt}"              > "$BASE/.hidden/decoy_flags/fake_flag2.txt"
+echo "FAKEFLAG{du_skal_videre_end_det_her}"       > "$BASE/.hidden/decoy_flags/fake_flag3.txt"
+
+echo "Her er bare lidt ligegyldig tekst." > "$BASE/.hidden/junk/readme.txt"
+echo "Gammel backup, ignorer mig."        > "$BASE/.old/backup_2021.tar.info"
+
+########################################
+# Skjult, base64-kodet hint i logfilen #
+########################################
+
+# Teksten (på klartekst) som er base64-kodet:
+# "Hint: Den fil du skal redigere hedder 'indtast_dit_navn_her.txt' og ligger et sted under /srv/ctf2. Brug 'find' til at lede efter den."
+#
+# Base64-værdien er:
+# SGludDogRGVuIGZpbCBkdSBza2FsIHJlZGlnZXJlIGhlZGRlciAnaW5kdGFzdF9kaXRfbmF2bl9oZXIudHh0JyBvZyBsaWdnZXIgZXQgc3RlZCB1bmRlciAvc3J2L2N0ZjIuIEJydWcgJ2ZpbmQnIHRpbCBhdCBsZWRlIGVmdGVyIGRlbi4K
+
+cat << 'EOF' >> "$BASE/logs/auth.log"
+Jan  1 12:34:56 ctf-host sshd[1234]: Accepted password for testuser from 10.0.0.1 port 4242 ssh2
+Jan  1 12:34:57 ctf-host sshd[1234]: pam_unix(sshd:session): session opened for user testuser
+Jan  1 12:35:00 ctf-host ctf-app[9999]: DEBUG: b64hint=SGludDogRGVuIGZpbCBkdSBza2FsIHJlZGlnZXJlIGhlZGRlciAnaW5kdGFzdF9kaXRfbmF2bl9oZXIudHh0JyBvZyBsaWdnZXIgZXQgc3RlZCB1bmRlciAvc3J2L2N0ZjIuIEJydWcgJ2ZpbmQnIHRpbCBhdCBsZWRlIGVmdGVyIGRlbi4K
+EOF
+
+#####################################
+# Den rigtige opgave-fil (flag-ting) #
+#####################################
+
+cat << 'EOF' > "$BASE/.very_hidden/.even_more/flag/indtast_dit_navn_her.txt"
+Tillykke, du har fundet den rigtige fil!
+
+Opgave:
+  1) Find dette dokument (hintet til filnavn og placering er base64-kodet i en logfil)
+  2) Dekod hintet (fx med:  echo "B64TEKST" | base64 -d )
+  3) Brug hintet til at finde denne fil
+  4) Skriv dit fulde navn på linjen herunder
+  5) Gem filen
+
+Navn:
+EOF
+
+####################################
+# Rettigheder til CTF-området      #
+####################################
+
+# Giv alle læserettigheder til hele CTF-området
+chmod -R a+r "$BASE"
+
+# Giv skrive-ret til selve opgave-filen, så alle kan udfylde den
+chmod a+w "$BASE/.very_hidden/.even_more/flag/indtast_dit_navn_her.txt"
+
+echo "CTF v2-miljø oprettet under $BASE"
+echo "Hint: Deltagerne skal nok kigge i logfilerne, afkode base64, og derefter finde og redigere den rigtige fil."
